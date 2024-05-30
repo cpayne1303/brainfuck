@@ -3,75 +3,81 @@ use rand::Rng;
 use std::time::Instant;
 use std::io::Read;
 use std::fs;
-fn cleanup(program: &Vec<char>) -> Vec<char> {
-	let instructions = ['+', '-', '<', '>', '[', ']', ',', '.'];
-	let mut program2: Vec<char> = Vec::with_capacity(program.len());
-	for i in program {
-if instructions.contains(i) {
-		program2.push(*i);
-		}
-	}
-	program2
+struct ByteCodeInterpreter {
+	instructions: ByteCodeObject,
+	tape: Vec<u8>,
+	tape_pointer: usize,
 }
-fn find_matching(program: &Vec<char>, symbol_num: usize) -> usize {
-	let mut left=1;
-	let mut right=0;
-	let mut symbol_num2 = symbol_num;
-	while right < left {
-				symbol_num2+=1;
-		if program[symbol_num2] == '[' {
-			left+=1;
-		}
-		if program[symbol_num2] == ']' {
-			right+=1;
-		}
-	}
-	symbol_num2
-}
-fn get_matches(program: &Vec<char>) -> HashMap<usize, usize> {
-	let mut matches: HashMap<usize, usize> = HashMap::new();
-	for (i, v) in program.iter().enumerate() {
-		if *v=='[' {
-			let matching = find_matching(program, i);
-			matches.insert(i, matching);
-		}
-	}
-	matches
-}
-fn execute_program(program: &str) {
+
+impl ByteCodeInterpreter {
+fn new(instructions: ByteCodeObject) -> ByteCodeInterpreter {
 	let mut tape: Vec<u8> = vec![0;30000];
+	ByteCodeInterpreter {
+instructions,
+		tape,
+		tape_pointer: 0,
+	}
+}
+fn execute_program(&mut self) {
 	let mut stack: Vec<usize> = Vec::new();
-	let mut tape_pointer = 0;
 	let mut symbol_num = 0;
-	let program3: Vec<char> = program.chars().collect();
-	let program2 = cleanup(&program3);
 	let mut num_digits=0;
-	let matches = get_matches(&program2);
+	let matches = get_matches(&self.instructions);
+	let mut num=10;
 	let mut rand = rand::thread_rng();
-	while symbol_num < program2.len() {
+	while symbol_num < self.instructions.instructions.len() {
 		// println!("{symbol_num}");
-		if program2[symbol_num] == '+' {
-			tape[tape_pointer]+=1;
+match self.instructions.instructions[symbol_num].instruction_type {
+Type::Add => {
+	match self.instructions.instructions[symbol_num].operand {
+		Option::Some(val) => {
+			self.tape[self.tape_pointer]+=val;
+		},
+		_ => {
+	self.tape[self.tape_pointer]+=1;
+		},
+	}
 			symbol_num +=1;
 			continue;
-		}
-		if program2[symbol_num] == '-' {
-			tape[tape_pointer] -=1;
+		},
+Type::Sub => {
+		match self.instructions.instructions[symbol_num].operand {
+Option::Some(val) => {
+			self.tape[self.tape_pointer] -= val;
+		},
+		_ => {
+		self.tape[self.tape_pointer] -=1;
+		},
+	}
 			symbol_num+= 1;
 			continue;
-		}
-		if program2[symbol_num] == '>' {
-			tape_pointer+=1;
+		},
+Type::AddPointer => {
+			match self.instructions.instructions[symbol_num].operand {
+Option::Some(val) => {
+self.tape_pointer+=val;
+},
+_ => {
+		self.tape_pointer+=1;
+},
+}
 			symbol_num += 1;
 			continue;
-		}
-		if program2[symbol_num] == '<' {
-			tape_pointer -= 1;
+		},
+Type::SubPointer => {
+			match self.instructions.instructions[symbol_num].operand {
+Option::Some(val) => {
+self.tape_pointer-=val;
+},
+_ => {
+		self.tape_pointer -= 1;
+},
+}
 			symbol_num += 1;
 			continue;
-		}
-		if program2[symbol_num] == '[' {
-			if tape[tape_pointer] == 0 {
+		},
+Type::Loop => {
+		if self.tape[self.tape_pointer] == 0 {
 				symbol_num = matches.get(&symbol_num).unwrap()+1;
 				continue;
 			}
@@ -80,9 +86,9 @@ fn execute_program(program: &str) {
 				symbol_num += 1;
 				continue;
 			}
-		}
-if program2[symbol_num] == ']' {
-	if tape[tape_pointer] > 0 {
+		},
+Type::LoopEnd => {
+		if self.tape[self.tape_pointer] > 0 {
 		let tmp = *stack.last().unwrap();
 		symbol_num = tmp+1;
 		continue;
@@ -92,9 +98,9 @@ if program2[symbol_num] == ']' {
 		stack.pop();
 		continue;
 	}
-}
-if program2[symbol_num] == ',' {
-let mut num: u8 =10;
+},
+Type::Input => {
+num =10;
 	if num_digits < 2000 {
 		if num_digits>0 {
 		num = rand.gen_range(0..=9);
@@ -117,30 +123,168 @@ let mut num: u8 =10;
 	// let num2 = num as char;
 	// println!("{num_digits}");
 	// println!("{num2}");
-	tape[tape_pointer] = num;
+	self.tape[self.tape_pointer] = num;
 	symbol_num += 1;
 	continue;
-}
-if program2[symbol_num] == '.' {
-	let thing = tape[tape_pointer] as char;
+},
+Type::Output => {
+let thing = self.tape[self.tape_pointer] as char;
 	println!("{thing}");
 	symbol_num+=1;
 	continue;
-}
-else {
-	symbol_num+=1;
-	continue;
+},
 }
 }
 }
-fn read_program(filename: &str) -> String {
+
+}
+struct ByteCodeObject {
+	instructions: Vec<Instruction>,
+}
+impl ByteCodeObject {
+	fn new(program: &Vec<char>) -> ByteCodeObject {
+let mut instructions: Vec<Instruction> = Vec::new();
+		for code in program {
+			let instruction = match code {
+				'+' => Instruction::add(Option::None),
+				'-' => Instruction::sub(Option::None),
+				'>' => Instruction::add_pointer(Option::None),
+				'<' => Instruction::sub_pointer(Option::None),
+				'[' => Instruction::loop_start(),
+				']' => Instruction::loop_end(),
+				',' => Instruction::input(),
+				_ => Instruction::output(),
+			};
+			instructions.push(instruction);
+		}
+ByteCodeObject {
+	instructions,
+}
+	}
+	}
+enum Type {
+	Add,
+	Sub,
+	AddPointer,
+	SubPointer,
+	Loop,
+	LoopEnd,
+	Input,
+	Output,
+}
+struct Instruction {
+	instruction_type: Type,
+	operand: Option<u8>,
+}
+impl Instruction {
+fn add(num: Option<u8>) -> Instruction {
+	let mut instruction_type = Type::Add;
+	Instruction {
+		instruction_type,
+		operand: num,
+	}
+}
+fn add_pointer(num: Option<u8>) -> Instruction {
+	let mut instruction_type = Type::AddPointer;
+	Instruction {
+		instruction_type,
+		operand: num,
+	}
+}
+fn sub(num: Option<u8>) -> Instruction {
+	let mut instruction_type = Type::Sub;
+	Instruction {
+		instruction_type,
+		operand: num,
+	}
+}
+fn sub_pointer(num: Option<u8>) -> Instruction {
+	let mut instruction_type = Type::SubPointer;
+	Instruction {
+		instruction_type,
+		operand: num,
+	}
+}
+fn loop_start() -> Instruction {
+	let mut instruction_type = Type::Loop;
+	Instruction {
+		instruction_type,
+		operand: Option::None,
+	}
+}
+fn loop_end() -> Instruction {
+	let mut instruction_type = Type::LoopEnd;
+	Instruction {
+		instruction_type,
+		operand: Option::None,
+	}
+}
+fn input() -> Instruction {
+	let mut instruction_type = Type::Input;
+	Instruction {
+		instruction_type,
+		operand: Option::None,
+	}
+}
+fn output() -> Instruction {
+	let mut instruction_type = Type::Output;
+	Instruction {
+		instruction_type,
+		operand: Option::None,
+	}
+}
+}
+fn cleanup(program: &Vec<char>) -> Vec<char> {
+	let instructions = ['+', '-', '<', '>', '[', ']', ',', '.'];
+	let mut program2: Vec<char> = Vec::with_capacity(program.len());
+	for i in program {
+if instructions.contains(i) {
+		program2.push(*i);
+		}
+	}
+	program2
+}
+fn find_matching(data: &ByteCodeObject, symbol_num: usize) -> usize {
+	let mut left=1;
+	let mut right=0;
+	let mut symbol_num2 = symbol_num;
+	while right < left {
+				symbol_num2+=1;
+match data.instructions[symbol_num2].instruction_type {
+	Type::Loop => {
+		left+=1;
+	},
+	Type::LoopEnd => {
+		right+=1;
+	},
+	_ => {},
+}
+		}
+	symbol_num2
+}
+fn get_matches(data: &ByteCodeObject) -> HashMap<usize, usize> {
+	let mut matches: HashMap<usize, usize> = HashMap::new();
+	for (i, v) in data.instructions.iter().enumerate() {
+		match v.instruction_type {
+			Type::Loop => {
+			let matching = find_matching(data, i);
+			matches.insert(i, matching);
+			},
+			_ => {},
+		}
+	}
+	matches
+}
+fn read_program(filename: &str) -> Vec<char> {
 	let contents:String = fs::read_to_string(filename).unwrap();
-	contents
+	contents.chars().collect()
 }
 fn main() {
 	let program = read_program("collatz.b");
+	let bytecode_object = ByteCodeObject::new(&program);
+	let mut bytecode_interpreter = ByteCodeInterpreter::new(bytecode_object);
+	bytecode_interpreter.execute_program();
 	let st = Instant::now();
-execute_program(&program);
 	let en = st.elapsed();
 	println!("{en:?}");
 	}
