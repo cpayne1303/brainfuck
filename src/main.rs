@@ -3,7 +3,7 @@ use std::time::Instant;
 use std::io::Read;
 use std::fs;
 fn cleanup(program: &Vec<char>) -> Vec<char> {
-	let mut program2: Vec<char> = Vec::new();
+	let mut program2: Vec<char> = Vec::with_capacity(program.len());
 	for i in 0..program.len() {
 		if program[i]=='+' || program[i]=='-' || program[i]=='<' || program[i]=='>' || program[i] == '[' || program[i] == ']' || program[i] == ',' || program[i] == '.' {
 			program2.push(program[i]);
