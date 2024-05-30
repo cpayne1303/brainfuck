@@ -2,6 +2,15 @@ use rand::Rng;
 use std::time::Instant;
 use std::io::Read;
 use std::fs;
+fn cleanup(program: &Vec<char>) -> Vec<char> {
+	let mut program2: Vec<char> = Vec::new();
+	for i in 0..program.len() {
+		if program[i]=='+' || program[i]=='-' || program[i]=='<' || program[i]=='>' || program[i] == '[' || program[i] == ']' || program[i] == ',' || program[i] == '.' {
+			program2.push(program[i]);
+		}
+	}
+	program2
+}
 fn find_matching(program: &Vec<char>, symbol_num: usize) -> usize {
 	let mut left=1;
 	let mut right=0;
@@ -22,7 +31,8 @@ fn execute_program(program: &str) {
 	let mut stack: Vec<usize> = Vec::new();
 	let mut tape_pointer = 0;
 	let mut symbol_num = 0;
-	let mut program2: Vec<char> = program.chars().collect();
+	let mut program3: Vec<char> = program.chars().collect();
+	let mut program2 = cleanup(&program3);
 	let mut num_digits=0;
 	let mut rand = rand::thread_rng();
 	while symbol_num < program2.len() {
@@ -83,17 +93,18 @@ let mut num: u8 =10;
 		num+=48;
 	}
 	 if num_digits == 640 {
-		println!("done");
+		 num=10;
+		// println!("done");
 	}
 	if num_digits > 640 {
-		println!("causing program exit");
+		// println!("causing program exit");
 		num=0;
 	}
 		num_digits+=1;
 
 	let num2 = num as char;
-	println!("{num_digits}");
-	println!("{num2}");
+	// println!("{num_digits}");
+	// println!("{num2}");
 	tape[tape_pointer] = num as u8;
 	symbol_num += 1;
 	continue;
