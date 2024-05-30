@@ -1,3 +1,5 @@
+use rand::Rng;
+use std::time::Instant;
 use std::io::Read;
 use std::fs;
 fn find_matching(program: &Vec<char>, symbol_num: usize) -> usize {
@@ -21,6 +23,8 @@ fn execute_program(program: &str) {
 	let mut tape_pointer = 0;
 	let mut symbol_num = 0;
 	let mut program2: Vec<char> = program.chars().collect();
+	let mut num_digits=0;
+	let mut rand = rand::thread_rng();
 	while symbol_num < program2.len() {
 		// println!("{symbol_num}");
 		if program2[symbol_num] == '+' {
@@ -58,8 +62,7 @@ fn execute_program(program: &str) {
 if program2[symbol_num] == ']' {
 	if tape[tape_pointer] > 0 {
 		let tmp = *stack.last().unwrap();
-		stack.pop();
-		symbol_num = tmp;
+		symbol_num = tmp+1;
 		continue;
 	}
 	else {
@@ -69,10 +72,29 @@ if program2[symbol_num] == ']' {
 	}
 }
 if program2[symbol_num] == ',' {
-	let mut buffer = [0;1];
-	println!("getting input");
-	std::io::stdin().read_exact(&mut buffer).expect("error");
-	tape[tape_pointer] = buffer[0] as u8;
+let mut num: u8 =10;
+	if num_digits < 640 {
+		if num_digits>0 {
+		num = rand.gen_range(0..=9);
+		}
+		else {
+			num = rand.gen_range(1..=9);
+		}
+		num+=48;
+	}
+	 if num_digits == 640 {
+		println!("done");
+	}
+	if num_digits > 640 {
+		println!("causing program exit");
+		num=0;
+	}
+		num_digits+=1;
+
+	let num2 = num as char;
+	println!("{num_digits}");
+	println!("{num2}");
+	tape[tape_pointer] = num as u8;
 	symbol_num += 1;
 	continue;
 }
@@ -94,5 +116,8 @@ fn read_program(filename: &str) -> String {
 }
 fn main() {
 	let mut program = read_program("collatz.b");
+	let st = Instant::now();
 execute_program(&program);
+	let en = st.elapsed();
+	println!("{en:?}");
 	}
