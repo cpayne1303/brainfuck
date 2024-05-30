@@ -4,10 +4,11 @@ use std::time::Instant;
 use std::io::Read;
 use std::fs;
 fn cleanup(program: &Vec<char>) -> Vec<char> {
+	let instructions = ['+', '-', '<', '>', '[', ']', ',', '.'];
 	let mut program2: Vec<char> = Vec::with_capacity(program.len());
-	for i in 0..program.len() {
-		if program[i]=='+' || program[i]=='-' || program[i]=='<' || program[i]=='>' || program[i] == '[' || program[i] == ']' || program[i] == ',' || program[i] == '.' {
-			program2.push(program[i]);
+	for i in program {
+if instructions.contains(i) {
+		program2.push(*i);
 		}
 	}
 	program2
@@ -29,9 +30,9 @@ fn find_matching(program: &Vec<char>, symbol_num: usize) -> usize {
 }
 fn get_matches(program: &Vec<char>) -> HashMap<usize, usize> {
 	let mut matches: HashMap<usize, usize> = HashMap::new();
-	for i in 0..program.len() {
-		if program[i]=='[' {
-			let mut matching = find_matching(program, i);
+	for (i, v) in program.iter().enumerate() {
+		if *v=='[' {
+			let matching = find_matching(program, i);
 			matches.insert(i, matching);
 		}
 	}
@@ -42,10 +43,10 @@ fn execute_program(program: &str) {
 	let mut stack: Vec<usize> = Vec::new();
 	let mut tape_pointer = 0;
 	let mut symbol_num = 0;
-	let mut program3: Vec<char> = program.chars().collect();
-	let mut program2 = cleanup(&program3);
+	let program3: Vec<char> = program.chars().collect();
+	let program2 = cleanup(&program3);
 	let mut num_digits=0;
-	let mut matches = get_matches(&program2);
+	let matches = get_matches(&program2);
 	let mut rand = rand::thread_rng();
 	while symbol_num < program2.len() {
 		// println!("{symbol_num}");
@@ -94,7 +95,7 @@ if program2[symbol_num] == ']' {
 }
 if program2[symbol_num] == ',' {
 let mut num: u8 =10;
-	if num_digits < 640 {
+	if num_digits < 2000 {
 		if num_digits>0 {
 		num = rand.gen_range(0..=9);
 		}
@@ -103,11 +104,11 @@ let mut num: u8 =10;
 		}
 		num+=48;
 	}
-	 if num_digits == 640 {
+	 if num_digits == 2000 {
 		 num=10;
 		// println!("done");
 	}
-	if num_digits > 640 {
+	if num_digits > 2000 {
 		// println!("causing program exit");
 		num=0;
 	}
@@ -116,12 +117,12 @@ let mut num: u8 =10;
 	// let num2 = num as char;
 	// println!("{num_digits}");
 	// println!("{num2}");
-	tape[tape_pointer] = num as u8;
+	tape[tape_pointer] = num;
 	symbol_num += 1;
 	continue;
 }
 if program2[symbol_num] == '.' {
-	let mut thing = tape[tape_pointer] as char;
+	let thing = tape[tape_pointer] as char;
 	println!("{thing}");
 	symbol_num+=1;
 	continue;
@@ -133,11 +134,11 @@ else {
 }
 }
 fn read_program(filename: &str) -> String {
-	let mut contents:String = fs::read_to_string(filename).unwrap();
+	let contents:String = fs::read_to_string(filename).unwrap();
 	contents
 }
 fn main() {
-	let mut program = read_program("collatz.b");
+	let program = read_program("collatz.b");
 	let st = Instant::now();
 execute_program(&program);
 	let en = st.elapsed();
