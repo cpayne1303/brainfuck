@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use rand::Rng;
 use std::time::Instant;
 use std::io::Read;
@@ -26,6 +27,16 @@ fn find_matching(program: &Vec<char>, symbol_num: usize) -> usize {
 	}
 	symbol_num2
 }
+fn get_matches(program: &Vec<char>) -> HashMap<usize, usize> {
+	let mut matches: HashMap<usize, usize> = HashMap::new();
+	for i in 0..program.len() {
+		if program[i]=='[' {
+			let mut matching = find_matching(program, i);
+			matches.insert(i, matching);
+		}
+	}
+	matches
+}
 fn execute_program(program: &str) {
 	let mut tape: Vec<u8> = vec![0;30000];
 	let mut stack: Vec<usize> = Vec::new();
@@ -34,6 +45,7 @@ fn execute_program(program: &str) {
 	let mut program3: Vec<char> = program.chars().collect();
 	let mut program2 = cleanup(&program3);
 	let mut num_digits=0;
+	let mut matches = get_matches(&program2);
 	let mut rand = rand::thread_rng();
 	while symbol_num < program2.len() {
 		// println!("{symbol_num}");
@@ -58,13 +70,12 @@ fn execute_program(program: &str) {
 			continue;
 		}
 		if program2[symbol_num] == '[' {
-			stack.push(symbol_num);
 			if tape[tape_pointer] == 0 {
-				symbol_num = find_matching(&program2, symbol_num)+1;
-				stack.pop();
+				symbol_num = matches.get(&symbol_num).unwrap()+1;
 				continue;
 			}
 			else {
+			stack.push(symbol_num);
 				symbol_num += 1;
 				continue;
 			}
@@ -102,7 +113,7 @@ let mut num: u8 =10;
 	}
 		num_digits+=1;
 
-	let num2 = num as char;
+	// let num2 = num as char;
 	// println!("{num_digits}");
 	// println!("{num2}");
 	tape[tape_pointer] = num as u8;
