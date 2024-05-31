@@ -11,7 +11,7 @@ struct ByteCodeInterpreter {
 
 impl ByteCodeInterpreter {
 fn new(instructions: ByteCodeObject) -> ByteCodeInterpreter {
-	let mut tape: Vec<u8> = vec![0;30000];
+	let tape: Vec<u8> = vec![0;30000];
 	ByteCodeInterpreter {
 instructions,
 		tape,
@@ -154,7 +154,7 @@ struct ByteCodeObject {
 }
 impl ByteCodeObject {
 	fn new(program2: &Vec<char>) -> ByteCodeObject {
-		let mut program = cleanup(&program2);
+		let program = cleanup(program2);
 let mut instructions: Vec<Instruction> = Vec::new();
 		for code in program {
 			let instruction = match code {
@@ -199,7 +199,7 @@ enum Instruction {
 }
 impl Instruction {
 fn add(num: Option<u8>) -> Instruction {
-	let mut instruction_type = Type::Add;
+	let instruction_type = Type::Add;
 	Instruction::Memory(
 	MemoryInstruction {
 		instruction_type,
@@ -208,7 +208,7 @@ fn add(num: Option<u8>) -> Instruction {
 	)
 }
 fn sub(num: Option<u8>) -> Instruction {
-	let mut instruction_type = Type::Sub;
+	let instruction_type = Type::Sub;
 	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
@@ -217,7 +217,7 @@ fn sub(num: Option<u8>) -> Instruction {
 	)
 }
 fn loop_start() -> Instruction {
-	let mut instruction_type = Type::Loop;
+	let instruction_type = Type::Loop;
 	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
@@ -226,7 +226,7 @@ fn loop_start() -> Instruction {
 	)
 }
 fn loop_end() -> Instruction {
-	let mut instruction_type = Type::LoopEnd;
+	let instruction_type = Type::LoopEnd;
 	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
@@ -235,7 +235,7 @@ fn loop_end() -> Instruction {
 	)
 }
 fn input() -> Instruction {
-	let mut instruction_type = Type::Input;
+	let instruction_type = Type::Input;
 	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
@@ -244,7 +244,7 @@ fn input() -> Instruction {
 	)
 }
 fn output() -> Instruction {
-	let mut instruction_type = Type::Output;
+	let instruction_type = Type::Output;
 	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
@@ -253,7 +253,7 @@ fn output() -> Instruction {
 	)
 }
 fn add_pointer(num: Option<usize>) -> Instruction {
-	let mut instruction_type = Type::AddPointer;
+	let instruction_type = Type::AddPointer;
 	Instruction::Pointer (
 	PointerInstruction {
 		instruction_type,
@@ -263,7 +263,7 @@ fn add_pointer(num: Option<usize>) -> Instruction {
 }
 
 fn sub_pointer(num: Option<usize>) -> Instruction {
-	let mut instruction_type = Type::SubPointer;
+	let instruction_type = Type::SubPointer;
 	Instruction::Pointer (
 	PointerInstruction {
 		instruction_type,
@@ -307,14 +307,11 @@ fn get_matches(data: &ByteCodeObject) -> HashMap<usize, usize> {
 	let mut matches: HashMap<usize, usize> = HashMap::new();
 	for (i, v) in data.instructions.iter().enumerate() {
 		if let Instruction::Memory(v2) = v{
-		match v2.instruction_type {
-			Type::Loop => {
+		if let Type::Loop = v2.instruction_type {
 			let matching = find_matching(data, i);
 			matches.insert(i, matching);
-			},
-			_ => {},
+			}
 		}
-	}
 }
 	matches
 }
