@@ -27,9 +27,11 @@ fn execute_program(&mut self) {
 	let mut rand = rand::thread_rng();
 	while symbol_num < self.instructions.instructions.len() {
 		// println!("{symbol_num}");
-match self.instructions.instructions[symbol_num].instruction_type {
+		match &self.instructions.instructions[symbol_num] {
+			Instruction::Memory(memory_instruction) => {
+match memory_instruction.instruction_type {
 Type::Add => {
-	match self.instructions.instructions[symbol_num].operand {
+	match memory_instruction.operand {
 		Option::Some(val) => {
 			self.tape[self.tape_pointer]+=val;
 		},
@@ -41,7 +43,7 @@ Type::Add => {
 			continue;
 		},
 Type::Sub => {
-		match self.instructions.instructions[symbol_num].operand {
+		match memory_instruction.operand {
 Option::Some(val) => {
 			self.tape[self.tape_pointer] -= val;
 		},
@@ -50,30 +52,6 @@ Option::Some(val) => {
 		},
 	}
 			symbol_num+= 1;
-			continue;
-		},
-Type::AddPointer => {
-			match self.instructions.instructions[symbol_num].operand {
-Option::Some(val) => {
-self.tape_pointer+=val;
-},
-_ => {
-		self.tape_pointer+=1;
-},
-}
-			symbol_num += 1;
-			continue;
-		},
-Type::SubPointer => {
-			match self.instructions.instructions[symbol_num].operand {
-Option::Some(val) => {
-self.tape_pointer-=val;
-},
-_ => {
-		self.tape_pointer -= 1;
-},
-}
-			symbol_num += 1;
 			continue;
 		},
 Type::Loop => {
@@ -133,7 +111,41 @@ let thing = self.tape[self.tape_pointer] as char;
 	symbol_num+=1;
 	continue;
 },
+_ => {},
 }
+},
+Instruction::Pointer(pointer_instruction) => {
+	match pointer_instruction.instruction_type {
+Type::AddPointer => {
+			match pointer_instruction.operand {
+Option::Some(val) => {
+self.tape_pointer+=val;
+},
+_ => {
+		self.tape_pointer+=1;
+},
+}
+			symbol_num += 1;
+			continue;
+		},
+Type::SubPointer => {
+			match pointer_instruction.operand {
+Option::Some(val) => {
+self.tape_pointer-=val;
+},
+_ => {
+		self.tape_pointer -= 1;
+},
+}
+			symbol_num += 1;
+			continue;
+		},
+		_ => {},
+	}
+	},
+}
+
+
 }
 }
 
@@ -172,67 +184,94 @@ enum Type {
 	Input,
 	Output,
 }
-struct Instruction {
+struct MemoryInstruction {
 	instruction_type: Type,
 	operand: Option<u8>,
+}
+struct PointerInstruction {
+	instruction_type: Type,
+	operand: Option<usize>,
+}
+
+enum Instruction {
+	Memory(MemoryInstruction),
+	Pointer(PointerInstruction),
 }
 impl Instruction {
 fn add(num: Option<u8>) -> Instruction {
 	let mut instruction_type = Type::Add;
-	Instruction {
+	Instruction::Memory(
+	MemoryInstruction {
 		instruction_type,
 		operand: num,
 	}
-}
-fn add_pointer(num: Option<u8>) -> Instruction {
-	let mut instruction_type = Type::AddPointer;
-	Instruction {
-		instruction_type,
-		operand: num,
-	}
+	)
 }
 fn sub(num: Option<u8>) -> Instruction {
 	let mut instruction_type = Type::Sub;
-	Instruction {
+	Instruction::Memory (
+	MemoryInstruction {
 		instruction_type,
 		operand: num,
 	}
-}
-fn sub_pointer(num: Option<u8>) -> Instruction {
-	let mut instruction_type = Type::SubPointer;
-	Instruction {
-		instruction_type,
-		operand: num,
-	}
+	)
 }
 fn loop_start() -> Instruction {
 	let mut instruction_type = Type::Loop;
-	Instruction {
+	Instruction::Memory (
+	MemoryInstruction {
 		instruction_type,
 		operand: Option::None,
 	}
+	)
 }
 fn loop_end() -> Instruction {
 	let mut instruction_type = Type::LoopEnd;
-	Instruction {
+	Instruction::Memory (
+	MemoryInstruction {
 		instruction_type,
 		operand: Option::None,
 	}
+	)
 }
 fn input() -> Instruction {
 	let mut instruction_type = Type::Input;
-	Instruction {
+	Instruction::Memory (
+	MemoryInstruction {
 		instruction_type,
 		operand: Option::None,
 	}
+	)
 }
 fn output() -> Instruction {
 	let mut instruction_type = Type::Output;
-	Instruction {
+	Instruction::Memory (
+	MemoryInstruction {
 		instruction_type,
 		operand: Option::None,
 	}
+	)
 }
+fn add_pointer(num: Option<usize>) -> Instruction {
+	let mut instruction_type = Type::AddPointer;
+	Instruction::Pointer (
+	PointerInstruction {
+		instruction_type,
+		operand: num,
+	}
+	)
+}
+
+fn sub_pointer(num: Option<usize>) -> Instruction {
+	let mut instruction_type = Type::SubPointer;
+	Instruction::Pointer (
+	PointerInstruction {
+		instruction_type,
+		operand: num,
+	}
+	)
+}
+
 }
 fn cleanup(program: &Vec<char>) -> Vec<char> {
 	let instructions = ['+', '-', '<', '>', '[', ']', ',', '.'];
@@ -250,7 +289,8 @@ fn find_matching(data: &ByteCodeObject, symbol_num: usize) -> usize {
 	let mut symbol_num2 = symbol_num;
 	while right < left {
 				symbol_num2+=1;
-match data.instructions[symbol_num2].instruction_type {
+		if let Instruction::Memory(instruction) = &data.instructions[symbol_num2] {
+match instruction.instruction_type {
 	Type::Loop => {
 		left+=1;
 	},
@@ -259,13 +299,15 @@ match data.instructions[symbol_num2].instruction_type {
 	},
 	_ => {},
 }
+}
 		}
 	symbol_num2
 }
 fn get_matches(data: &ByteCodeObject) -> HashMap<usize, usize> {
 	let mut matches: HashMap<usize, usize> = HashMap::new();
 	for (i, v) in data.instructions.iter().enumerate() {
-		match v.instruction_type {
+		if let Instruction::Memory(v2) = v{
+		match v2.instruction_type {
 			Type::Loop => {
 			let matching = find_matching(data, i);
 			matches.insert(i, matching);
@@ -273,6 +315,7 @@ fn get_matches(data: &ByteCodeObject) -> HashMap<usize, usize> {
 			_ => {},
 		}
 	}
+}
 	matches
 }
 fn read_program(filename: &str) -> Vec<char> {
