@@ -78,8 +78,7 @@ Type::LoopEnd => {
 	}
 },
 Type::Input => {
-num =10;
-	if num_digits < 2000 {
+	if num_digits < 640 {
 		if num_digits>0 {
 		num = rand.gen_range(0..=9);
 		}
@@ -88,11 +87,11 @@ num =10;
 		}
 		num+=48;
 	}
-	 if num_digits == 2000 {
+	 if num_digits == 640 {
 		 num=10;
 		// println!("done");
 	}
-	if num_digits > 2000 {
+	if num_digits > 640 {
 		// println!("causing program exit");
 		num=0;
 	}
@@ -154,14 +153,15 @@ struct ByteCodeObject {
 	instructions: Vec<Instruction>,
 }
 impl ByteCodeObject {
-	fn new(program: &Vec<char>) -> ByteCodeObject {
+	fn new(program2: &Vec<char>) -> ByteCodeObject {
+		let mut program = cleanup(&program2);
 let mut instructions: Vec<Instruction> = Vec::new();
 		for code in program {
 			let instruction = match code {
-				'+' => Instruction::add(Option::None),
-				'-' => Instruction::sub(Option::None),
-				'>' => Instruction::add_pointer(Option::None),
-				'<' => Instruction::sub_pointer(Option::None),
+				'+' => Instruction::add(Option::Some(1)),
+				'-' => Instruction::sub(Option::Some(1)),
+				'>' => Instruction::add_pointer(Option::Some(1)),
+				'<' => Instruction::sub_pointer(Option::Some(1)),
 				'[' => Instruction::loop_start(),
 				']' => Instruction::loop_end(),
 				',' => Instruction::input(),
@@ -323,11 +323,11 @@ fn read_program(filename: &str) -> Vec<char> {
 	contents.chars().collect()
 }
 fn main() {
+		let st = Instant::now();
 	let program = read_program("collatz.b");
 	let bytecode_object = ByteCodeObject::new(&program);
 	let mut bytecode_interpreter = ByteCodeInterpreter::new(bytecode_object);
 	bytecode_interpreter.execute_program();
-	let st = Instant::now();
 	let en = st.elapsed();
 	println!("{en:?}");
 	}
