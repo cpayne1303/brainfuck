@@ -3,6 +3,7 @@ use rand::Rng;
 use std::time::Instant;
 use std::io::Read;
 use std::fs;
+#[derive(Clone)]
 struct ByteCodeInterpreter {
 	instructions: ByteCodeObject,
 	tape: Vec<u8>,
@@ -66,7 +67,7 @@ Type::LoopEnd => {
 	}
 },
 Type::Input => {
-	if num_digits < 640 {
+	if num_digits < 2000 {
 		if num_digits>0 {
 		num = rand.gen_range(0..=9);
 		}
@@ -75,11 +76,11 @@ Type::Input => {
 		}
 		num+=48;
 	}
-	 if num_digits == 640 {
+	 if num_digits == 2000 {
 		 num=10;
 		// println!("done");
 	}
-	if num_digits > 640 {
+	if num_digits > 2000 {
 		// println!("causing program exit");
 		num=0;
 	}
@@ -93,8 +94,10 @@ Type::Input => {
 	continue;
 },
 Type::Output => {
-let thing = self.tape[self.tape_pointer] as char;
-	println!("{thing}");
+let thing = self.tape[self.tape_pointer];
+	let mut thing2=thing as char;
+	// println!("{thing}");
+	println!("{thing2}");
 	symbol_num+=1;
 	continue;
 },
@@ -125,6 +128,7 @@ _ => {
 }
 
 }
+#[derive(Clone)]
 struct ByteCodeObject {
 	instructions: Vec<Instruction>,
 }
@@ -145,11 +149,138 @@ let mut instructions: Vec<Instruction> = Vec::new();
 			};
 			instructions.push(instruction);
 		}
-ByteCodeObject {
+let mut tmp = ByteCodeObject {
 	instructions,
+};
+tmp.optimize();
+tmp
+	}
+	fn group_add_instructions(&mut self) {
+	let mut instructions: Vec<Instruction> = Vec::new();
+let mut i=0;
+	while i<self.instructions.len() {
+		// println!("first loop {i}");
+		let mut instruction = self.instructions[i].clone();
+	if let Instruction::Memory(ref mut instruction2) = instruction {
+		// println!("instruction is of type Memory");
+if let Type::Add = instruction2.instruction_type {
+	// println!("instruction is an Add operation");
+	match instruction2.operand {
+		Option::Some(ref mut val) => {
+			// println!("the instruction has a valid operand");
+			// println!("all conditions met");
+			while i<self.instructions.len()-1 {
+				// println!("looking at {} inside loop", i+1);
+				if let Instruction::Memory(instruction3) = &self.instructions[i+1] {
+					// println!("the next instruction is also a Memory instruction");
+					if let Type::Add = instruction3.instruction_type {
+						// println!("the next instruction is also of type Add");
+						i+=1;
+						match instruction3.operand {
+							Option::Some(val2) => {
+								// println!("the next instruction also has a valid operand");
+								*val = *val + val2;
+								// println!("{val}");
+							},
+							_ => {},
+						}
+					}
+						else {
+							// println!("the next instruction is not of type Add");
+							break;
+						}
+					}
+				else {
+					// println!("the next instruction is is not a Memory instruction");
+					break;
+				}
+			}
+		},
+		_ => {},
+	}
 }
+}
+let mut instruction4 = instruction.clone();
+instructions.push(instruction4);
+i+=1;
+}
+self.instructions=instructions;
+}
+
+
+	fn group_add_pointer_instructions(&mut self) {
+	let mut instructions: Vec<Instruction> = Vec::new();
+let mut i=0;
+	while i<self.instructions.len() {
+		// println!("first loop {i}");
+		let mut instruction = self.instructions[i].clone();
+	if let Instruction::Pointer(ref mut instruction2) = instruction {
+		// println!("instruction is of type pointer");
+if let Type::AddPointer = instruction2.instruction_type {
+// 	println!("instruction is an addpointer operation");
+	match instruction2.operand {
+		Option::Some(ref mut val) => {
+			// println!("the instruction has a valid operand");
+			// println!("all conditions met");
+			while i<self.instructions.len()-1 {
+				// println!("looking at {} inside loop", i+1);
+				if let Instruction::Pointer(instruction3) = &self.instructions[i+1] {
+					// println!("the next instruction is also a pointer instruction");
+					if let Type::AddPointer = instruction3.instruction_type {
+						// println!("the next instruction is also of type addpointer");
+						i+=1;
+						match instruction3.operand {
+							Option::Some(val2) => {
+								// println!("the next instruction also has a valid operand");
+								* val = *val + val2;
+							// 	println!("{val}");
+							},
+							_ => {},
+						}
+					}
+						else {
+							// println!("the next instruction is not of type addpointer");
+							break;
+						}
+					}
+				else {
+// 					println!("the next instruction is is not a pointer instruction");
+					break;
+				}
+			}
+		},
+		_ => {},
 	}
+}
+}
+let mut instruction4 = instruction.clone();
+instructions.push(instruction4);
+i+=1;
+}
+self.instructions=instructions;
+}
+
+fn optimize(&mut self) {
+	self.group_add_instructions();
+	println!("1 pass done");
+	self.group_add_pointer_instructions();
+println!("finished optimizing");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 	}
+	#[derive(Clone)]
 enum Type {
 	Add,
 	AddPointer,
@@ -158,15 +289,17 @@ enum Type {
 	Input,
 	Output,
 }
+#[derive(Clone)]
 struct MemoryInstruction {
 	instruction_type: Type,
 	operand: Option<u8>,
 }
+#[derive(Clone)]
 struct PointerInstruction {
 	instruction_type: Type,
 	operand: Option<usize>,
 }
-
+#[derive(Clone)]
 enum Instruction {
 	Memory(MemoryInstruction),
 	Pointer(PointerInstruction),
