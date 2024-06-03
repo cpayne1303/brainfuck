@@ -42,18 +42,6 @@ Type::Add => {
 			symbol_num +=1;
 			continue;
 		},
-Type::Sub => {
-		match memory_instruction.operand {
-Option::Some(val) => {
-			self.tape[self.tape_pointer] -= val;
-		},
-		_ => {
-		self.tape[self.tape_pointer] -=1;
-		},
-	}
-			symbol_num+= 1;
-			continue;
-		},
 Type::Loop => {
 		if self.tape[self.tape_pointer] == 0 {
 				symbol_num = matches.get(&symbol_num).unwrap()+1;
@@ -127,18 +115,6 @@ _ => {
 			symbol_num += 1;
 			continue;
 		},
-Type::SubPointer => {
-			match pointer_instruction.operand {
-Option::Some(val) => {
-self.tape_pointer-=val;
-},
-_ => {
-		self.tape_pointer -= 1;
-},
-}
-			symbol_num += 1;
-			continue;
-		},
 		_ => {},
 	}
 	},
@@ -159,9 +135,9 @@ let mut instructions: Vec<Instruction> = Vec::new();
 		for code in program {
 			let instruction = match code {
 				'+' => Instruction::add(Option::Some(1)),
-				'-' => Instruction::sub(Option::Some(1)),
+				'-' => Instruction::add(Option::Some(255)),
 				'>' => Instruction::add_pointer(Option::Some(1)),
-				'<' => Instruction::sub_pointer(Option::Some(1)),
+				'<' => Instruction::add_pointer(Option::Some(std::usize::MAX)),
 				'[' => Instruction::loop_start(),
 				']' => Instruction::loop_end(),
 				',' => Instruction::input(),
@@ -176,9 +152,7 @@ ByteCodeObject {
 	}
 enum Type {
 	Add,
-	Sub,
 	AddPointer,
-	SubPointer,
 	Loop,
 	LoopEnd,
 	Input,
@@ -201,15 +175,6 @@ impl Instruction {
 fn add(num: Option<u8>) -> Instruction {
 	let instruction_type = Type::Add;
 	Instruction::Memory(
-	MemoryInstruction {
-		instruction_type,
-		operand: num,
-	}
-	)
-}
-fn sub(num: Option<u8>) -> Instruction {
-	let instruction_type = Type::Sub;
-	Instruction::Memory (
 	MemoryInstruction {
 		instruction_type,
 		operand: num,
@@ -262,15 +227,6 @@ fn add_pointer(num: Option<usize>) -> Instruction {
 	)
 }
 
-fn sub_pointer(num: Option<usize>) -> Instruction {
-	let instruction_type = Type::SubPointer;
-	Instruction::Pointer (
-	PointerInstruction {
-		instruction_type,
-		operand: num,
-	}
-	)
-}
 
 }
 fn cleanup(program: &Vec<char>) -> Vec<char> {
