@@ -67,24 +67,11 @@ Type::LoopEnd => {
 	}
 },
 Type::Input => {
-	if num_digits < 2000 {
-		if num_digits>0 {
-		num = rand.gen_range(0..=9);
-		}
-		else {
-			num = rand.gen_range(1..=9);
-		}
-		num+=48;
-	}
-	 if num_digits == 2000 {
-		 num=10;
-		// println!("done");
-	}
-	if num_digits > 2000 {
-		// println!("causing program exit");
-		num=0;
-	}
-		num_digits+=1;
+let mut buffer = [0u8;1];
+	std::io::stdin().read_exact(&mut buffer);
+	let mut num = buffer[0];
+	println!("{num}");
+	num_digits+=1;
 
 	// let num2 = num as char;
 	// println!("{num_digits}");
