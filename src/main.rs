@@ -22,69 +22,63 @@ impl ByteCodeInterpreter {
         let mut stack: Vec<usize> = Vec::new();
         let mut symbol_num = 0;
         let matches = get_matches(&self.instructions);
-        let mut num = 0;
         while symbol_num < self.instructions.instructions.len() {
             // println!("{symbol_num}");
             match &self.instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
-			match operand {
-			Option::Some(val) => {
-                                    self.tape[self.tape_pointer] += val;
-                                },
-                                _ => {
+if let Option::Some(val) = operand {
+			self.tape[self.tape_pointer] += val;
+                                }
+                                else {
                                     self.tape[self.tape_pointer] += 1;
 				}
-                                };
                             symbol_num += 1;
                             continue;
 			}
                 Instruction::Pointer(operand) => {
-			match operand {
-                                Option::Some(val) => {
+if let Option::Some(val) = operand {
                                     self.tape_pointer += val;
                                 }
-                                _ => {
+                                else {
                                     self.tape_pointer += 1;
                             }
-		    };
                             symbol_num += 1;
-                            continue;
+                            // continue;
 		    }
-                        
                         Instruction::Loop => {
                             if self.tape[self.tape_pointer] == 0 {
                                 symbol_num = matches.get(&symbol_num).unwrap() + 1;
-                                continue;
+                                // continue;
                             } else {
                                 stack.push(symbol_num);
                                 symbol_num += 1;
-                                continue;
+                                // continue;
                             }
                         }
                         Instruction::LoopEnd => {
                             if self.tape[self.tape_pointer] > 0 {
                                 let tmp = *stack.last().unwrap();
                                 symbol_num = tmp + 1;
-                                continue;
+                                // continue;
                             } else {
                                 symbol_num += 1;
                                 stack.pop();
-                                continue;
+                                // continue;
                             }
                         }
                         Instruction::Input => {
                             let mut buffer = [0u8; 1];
                             let _ = std::io::stdin().read_exact(&mut buffer);
-                            num = buffer[0];
+                            let num = buffer[0];
                             self.tape[self.tape_pointer] = num;
                             symbol_num += 1;
-                            continue;
+                            // continue;
                         }
                         Instruction::Output => {
                             let thing = self.tape[self.tape_pointer] as char;
                             print!("{thing}");
                             symbol_num += 1;
-                            continue;
+                            // continue;
                         }
 		}
 
@@ -97,7 +91,7 @@ struct ByteCodeObject {
     instructions: Vec<Instruction>,
 }
 impl ByteCodeObject {
-    fn new(program2: &Vec<char>) -> ByteCodeObject {
+    fn new(program2: &[char]) -> ByteCodeObject {
         let program = cleanup(program2);
         let mut instructions: Vec<Instruction> = Vec::new();
         for code in program {
@@ -122,80 +116,52 @@ impl ByteCodeObject {
         let mut i = 0;
         while i < self.instructions.len() {
             let mut instruction = self.instructions[i].clone();
-            if let Instruction::Memory(ref mut operand) = instruction {
-		    match operand {
-                        Option::Some(ref mut val) => {
+            if let Instruction::Memory(Some(ref mut val)) = instruction {
                             while i < self.instructions.len() - 1 {
                                 if let Instruction::Memory(operand2) = &self.instructions[i + 1] {
                                         i += 1;
-                                        match operand2 {
-                                            Option::Some(val2) => {
-                                                *val = *val + val2;
+                                            if let Option::Some(val2) = operand2 {
+                                                *val+= val2;
                                             }
-					    _ => {}
-                                        };
                                 } else {
                                     break;
                                 }
 		}
-				}
-				_ => {}
                 };
-	}
             instructions.push(instruction);
             i += 1;
         }
         self.instructions = instructions;
-    }
-    
+    }    
 fn group_add_pointer_instructions(&mut self) {
         let mut instructions: Vec<Instruction> = Vec::new();
         let mut i = 0;
         while i < self.instructions.len() {
             // println!("first loop {i}");
             let mut instruction = self.instructions[i].clone();
-            if let Instruction::Pointer(ref mut operand) = instruction {
-                    match operand {
-                        Option::Some(ref mut val) => {
+            if let Instruction::Pointer(Some(ref mut val)) = instruction {
                             while i < self.instructions.len() - 1 {
                                 if let Instruction::Pointer(operand2) =
                                     &self.instructions[i + 1] {
                                         i += 1;
-                                        match operand2 {
-                                            Option::Some(val2) => {
-                                                *val = *val + val2;
+                                            if let Option::Some(val2) = operand2 {
+                                                *val+=val2;
                                             }
-                                            _ => {}
-                                        };
                                     } else {
                                         break;
                                     }
-			    }
-
 			}
-                        _ => {}
             }
-    }
             instructions.push(instruction);
             i += 1;
         }
         self.instructions = instructions;
     }
-
-
     fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
         println!("finished optimizing");
     }
-}
-#[derive(Clone)]
-struct MemoryInstruction {
-    operand: Option<u8>,
-}
-#[derive(Clone)]
-struct PointerInstruction {
-    operand: Option<usize>,
 }
 #[derive(Clone)]
 enum Instruction {
@@ -226,12 +192,11 @@ impl Instruction {
         Instruction::Pointer(num)
 }
 }
-fn cleanup(program: &Vec<char>) -> Vec<char> {
+fn cleanup(program: &[char]) -> Vec<char> {
     let instructions = ['+', '-', '<', '>', '[', ']', ',', '.'];
     program
         .iter()
-        .filter(|i| instructions.contains(&i))
-        .map(|i| *i)
+        .filter(|i| instructions.contains(i)).copied()
         .collect::<Vec<char>>()
 }
 fn find_matching(data: &ByteCodeObject, symbol_num: usize) -> usize {
@@ -263,12 +228,11 @@ fn get_matches(data: &ByteCodeObject) -> HashMap<usize, usize> {
     matches
 }
 fn read_program(filename: &str) -> Vec<char> {
-    let contents: String = fs::read_to_string(filename).unwrap();
-    contents.chars().collect()
+    fs::read_to_string(filename).unwrap().chars().collect()
 }
 fn main() {
     let st = Instant::now();
-    let program = read_program("collatz.b");
+    let program = read_program("mandelbrot.b");
     let bytecode_object = ByteCodeObject::new(&program);
     let mut bytecode_interpreter = ByteCodeInterpreter::new(bytecode_object);
     bytecode_interpreter.execute_program();
