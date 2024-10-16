@@ -27,17 +27,17 @@ impl ByteCodeInterpreter {
             match &self.instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
 if let Option::Some(val) = operand {
-			self.tape[self.tape_pointer] += val;
+	self.tape[self.tape_pointer]=self.tape[self.tape_pointer].wrapping_add(*val);
                                 }
                                 else {
-                                    self.tape[self.tape_pointer] += 1;
+                                    self.tape[self.tape_pointer] = self.tape[self.tape_pointer].wrapping_add(1);
 				}
                             symbol_num += 1;
                             continue;
 			}
                 Instruction::Pointer(operand) => {
 if let Option::Some(val) = operand {
-                                    self.tape_pointer += val;
+                                    self.tape_pointer = self.tape_pointer.wrapping_add(*val);
                                 }
                                 else {
                                     self.tape_pointer += 1;
@@ -121,7 +121,7 @@ impl ByteCodeObject {
                                 if let Instruction::Memory(operand2) = &self.instructions[i + 1] {
                                         i += 1;
                                             if let Option::Some(val2) = operand2 {
-                                                *val+= val2;
+                                                (*val) = (*val).wrapping_add(*val2);
                                             }
                                 } else {
                                     break;
@@ -145,7 +145,7 @@ fn group_add_pointer_instructions(&mut self) {
                                     &self.instructions[i + 1] {
                                         i += 1;
                                             if let Option::Some(val2) = operand2 {
-                                                *val+=val2;
+                                                (*val) = (*val).wrapping_add(*val2);
                                             }
                                     } else {
                                         break;
