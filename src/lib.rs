@@ -29,19 +29,11 @@ impl ByteCodeInterpreter {
 		// println!("{symbol_num}");
             match &instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
-                    if let Option::Some(val) = operand {
                         self.tape[self.tape_pointer] =
-                            self.tape[self.tape_pointer].wrapping_add(*val);
-                    } else {
-                        self.tape[self.tape_pointer] = self.tape[self.tape_pointer].wrapping_add(1);
-                    }
+                            self.tape[self.tape_pointer].wrapping_add(*operand);
                 }
                 Instruction::Pointer(operand) => {
-                    if let Option::Some(val) = operand {
-                        self.tape_pointer = self.tape_pointer.wrapping_add(*val);
-                    } else {
-                        self.tape_pointer += 1;
-                    }
+                        self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
                 Instruction::LoopInstruction(instructions2) => {
                     if self.tape[self.tape_pointer]!=0 {
@@ -81,10 +73,10 @@ impl ByteCodeObject {
 let mut i=0;
 	    while i<program.len() {
             let instruction = match program[i] {
-                '+' => Instruction::add(Option::Some(1)),
-                '-' => Instruction::add(Option::Some(255)),
-                '>' => Instruction::add_pointer(Option::Some(1)),
-                '<' => Instruction::add_pointer(Option::Some(usize::MAX)),
+                '+' => Instruction::add(1),
+                '-' => Instruction::add(255),
+                '>' => Instruction::add_pointer(1),
+                '<' => Instruction::add_pointer(usize::MAX),
                 '[' => {
 			let matching:usize = *matches.get(&i).expect("not in dictionary");
 			let subprogram = &program[i+1..matching];
@@ -111,16 +103,15 @@ let mut i=0;
 			instructions.group_add_instructions();
 			// instruction = Instruction::LoopInstruction(instructions);
 		}
-            if let Instruction::Memory(Some(ref mut val)) = instruction {
+            if let Instruction::Memory(ref mut val) = instruction {
                 while i < self.instructions.len() - 1 {
                     if let Instruction::Memory(operand2) = &self.instructions[i + 1] {
                         i += 1;
-                        if let Option::Some(val2) = operand2 {
-                            (*val) = (*val).wrapping_add(*val2);
-                        }
-                    } else {
-                        break;
-                    }
+                            (*val) = (*val).wrapping_add(*operand2);
+		    }
+		    else {
+			    break;
+		    }
                 }
             };
             instructions.push(instruction);
@@ -136,13 +127,11 @@ let mut i=0;
 		if let Instruction::LoopInstruction(ref mut instructions) = instruction {
 			instructions.group_add_pointer_instructions();
 		}
-            if let Instruction::Pointer(Some(ref mut val)) = instruction {
+            if let Instruction::Pointer(ref mut val) = instruction {
                 while i < self.instructions.len() - 1 {
                     if let Instruction::Pointer(operand2) = &self.instructions[i + 1] {
                         i += 1;
-                        if let Option::Some(val2) = operand2 {
-                            (*val) = (*val).wrapping_add(*val2);
-                        }
+                            (*val) = (*val).wrapping_add(*operand2);
                     } else {
                         break;
                     }
@@ -156,19 +145,18 @@ let mut i=0;
     fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
-        println!("finished optimizing");
     }
 }
 #[derive(Clone)]
 enum Instruction {
-    Memory(Option<u8>),
-    Pointer(Option<usize>),
+    Memory(u8),
+    Pointer(usize),
     LoopInstruction(ByteCodeObject),
     Input,
     Output,
 }
 impl Instruction {
-    fn add(num: Option<u8>) -> Instruction {
+    fn add(num: u8) -> Instruction {
         Instruction::Memory(num)
     }
     fn loop_instruction(instructions: ByteCodeObject) -> Instruction {
@@ -180,7 +168,7 @@ impl Instruction {
     fn output() -> Instruction {
         Instruction::Output
     }
-    fn add_pointer(num: Option<usize>) -> Instruction {
+    fn add_pointer(num: usize) -> Instruction {
         Instruction::Pointer(num)
     }
 }
