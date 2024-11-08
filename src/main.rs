@@ -1,4 +1,4 @@
-use clap::{Parser, ArgAction};
+use clap::Parser;
 use brainfuck::*;
 use std::time::Instant;
 #[derive(Parser)]

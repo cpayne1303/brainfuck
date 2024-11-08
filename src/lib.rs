@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ByteCodeInterpreter {
     instructions: ByteCodeObject,
     tape: Vec<u8>,
@@ -35,7 +35,7 @@ impl ByteCodeInterpreter {
                 Instruction::Pointer(operand) => {
                         self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
-                Instruction::LoopInstruction(instructions2) => {
+                Instruction::Loop(instructions2) => {
                     if self.tape[self.tape_pointer]!=0 {
 self.execute_program_helper(instructions2);
 			    continue;
@@ -57,7 +57,7 @@ self.execute_program_helper(instructions2);
     }
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ByteCodeObject {
     instructions: Vec<Instruction>,
 }
@@ -82,7 +82,7 @@ let mut i=0;
 			let subprogram = &program[i+1..matching];
 			let obj = ByteCodeObject::new(subprogram);
 			i=matching;
-			Instruction::LoopInstruction(obj)
+			Instruction::loop_instruction(obj)
 			}
                 ',' => Instruction::input(),
                 _ => Instruction::output(),
@@ -99,9 +99,9 @@ let mut i=0;
         let mut i = 0;
         while i < self.instructions.len() {
             let mut instruction:Instruction = self.instructions[i].clone();
-		if let Instruction::LoopInstruction(ref mut instructions) = instruction {
+		if let Instruction::Loop(ref mut instructions) = instruction {
 			instructions.group_add_instructions();
-			// instruction = Instruction::LoopInstruction(instructions);
+			// instruction = Instruction::Loop(instructions);
 		}
             if let Instruction::Memory(ref mut val) = instruction {
                 while i < self.instructions.len() - 1 {
@@ -124,7 +124,7 @@ let mut i=0;
         let mut i = 0;
         while i < self.instructions.len() {
             let mut instruction:Instruction = self.instructions[i].clone();
-		if let Instruction::LoopInstruction(ref mut instructions) = instruction {
+		if let Instruction::Loop(ref mut instructions) = instruction {
 			instructions.group_add_pointer_instructions();
 		}
             if let Instruction::Pointer(ref mut val) = instruction {
@@ -147,11 +147,11 @@ let mut i=0;
         self.group_add_pointer_instructions();
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Instruction {
     Memory(u8),
     Pointer(usize),
-    LoopInstruction(ByteCodeObject),
+    Loop(ByteCodeObject),
     Input,
     Output,
 }
@@ -160,7 +160,7 @@ impl Instruction {
         Instruction::Memory(num)
     }
     fn loop_instruction(instructions: ByteCodeObject) -> Instruction {
-        Instruction::LoopInstruction(instructions)
+        Instruction::Loop(instructions)
     }
     fn input() -> Instruction {
         Instruction::Input
@@ -189,7 +189,7 @@ stack.push(i);
 		continue;
 		}
 		if v == &']' {
-			let mut start = stack.pop().expect("brackets do not match");
+			let start = stack.pop().expect("brackets do not match");
 			matches.insert(start, i);
 			continue;
 		}
