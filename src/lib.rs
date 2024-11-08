@@ -6,7 +6,7 @@ pub struct ByteCodeInterpreter {
     instructions: ByteCodeObject,
     tape: Vec<u8>,
     tape_pointer: usize,
-	output_log: Vec<char>,
+	output_log: String,
 }
 
 impl ByteCodeInterpreter {
@@ -16,7 +16,7 @@ impl ByteCodeInterpreter {
             instructions,
             tape,
             tape_pointer: 0,
-		output_log: Vec::new(),
+		output_log: String::new(),
         }
     }
     pub fn execute_program(&mut self) {
