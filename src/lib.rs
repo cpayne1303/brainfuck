@@ -67,6 +67,10 @@ pub struct ByteCodeObject {
     instructions: Vec<Instruction>,
 }
 impl ByteCodeObject {
+	pub fn from_file(fname: &str) -> ByteCodeObject {
+		let program = read_program(fname);
+		ByteCodeObject::new(&program)
+	}
     pub fn new(program2: &[char]) -> ByteCodeObject {
         let program = cleanup(program2);
         let mut instructions: Vec<Instruction> = Vec::new();
