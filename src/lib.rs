@@ -180,32 +180,19 @@ fn cleanup(program: &[char]) -> Vec<char> {
         .copied()
         .collect::<Vec<char>>()
 }
-fn find_matching(data: &[char], symbol_num: usize) -> usize {
-    let mut left = 1;
-    let mut right = 0;
-    let mut symbol_num2 = symbol_num;
-    while right < left {
-	    // println!("{symbol_num2}");
-        symbol_num2 += 1;
-        match &data[symbol_num2] {
-            '[' => {
-                left += 1;
-            }
-            ']' => {
-                right += 1;
-            }
-            _ => {}
-        }
-    }
-    symbol_num2
-}
 fn get_matches(data: &[char]) -> HashMap<usize, usize> {
     let mut matches: HashMap<usize, usize> = HashMap::new();
+	let mut stack: Vec<usize> = Vec::new();
     for (i, v) in data.iter().enumerate() {
         if v == &'[' {
-            let matching = find_matching(data, i);
-            matches.insert(i, matching);
-        }
+stack.push(i);
+		continue;
+		}
+		if v == &']' {
+			let mut start = stack.pop().expect("brackets do not match");
+			matches.insert(start, i);
+			continue;
+		}
     }
     matches
 }
