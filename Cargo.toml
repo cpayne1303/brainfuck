@@ -1,4 +1,4 @@
 [package]
-name = "brainfuck2"
+name = "brainfuck"
 version = "0.1.0"
 edition = "2021"
