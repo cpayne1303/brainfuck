@@ -39,6 +39,9 @@ impl ByteCodeInterpreter {
                         continue;
                     }
                 }
+		Instruction::ClearCell => {
+			self.tape[self.tape_pointer]=0;
+		}
                 Instruction::Input => {
                     let mut buffer = [0u8; 1];
                     let _ = std::io::stdin().read_exact(&mut buffer);
@@ -138,9 +141,32 @@ impl ByteCodeObject {
         }
         self.instructions = instructions;
     }
+    fn add_clear_cell_instructions(&mut self) {
+	    let mut instructions: Vec<Instruction> = Vec::new();
+	    let mut i=0;
+	    while i<self.instructions.len() {
+		    let mut instruction = self.instructions[i].clone();
+		    if let Instruction::Loop(ref mut instructions2) = instruction {
+			    if instructions2.instructions.len() == 1 {
+				    if let Instruction::Memory(val) = instructions2.instructions[0] {
+					    if val == 255 {
+						    instruction = Instruction::ClearCell;
+					    }
+				    }
+			    }
+			    else {
+instructions2.add_clear_cell_instructions();
+			    }
+		    }
+		    instructions.push(instruction);
+		    i+=1;
+	    }
+	    self.instructions = instructions;
+    }
     fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
+	    self.add_clear_cell_instructions();
     }
 }
 #[derive(Clone, Debug)]
@@ -148,6 +174,7 @@ enum Instruction {
     Memory(u8),
     Pointer(usize),
     Loop(ByteCodeObject),
+	ClearCell,
     Input,
     Output,
 }
