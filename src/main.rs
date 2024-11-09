@@ -20,10 +20,9 @@ fn main() {
         let tmp = brainfuck_code.chars().collect::<Vec<char>>();
         ByteCodeObject::new(&tmp)
     } else {
-        eprintln!("error");
+        eprintln!("no file or code object passed");
         return;
     };
-
     let mut bytecode_interpreter = ByteCodeInterpreter::new(bytecode_object);
     if cli.time {
         let st = Instant::now();
