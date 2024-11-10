@@ -275,7 +275,7 @@ pub fn read_program(filename: &str) -> Vec<char> {
 }
 #[test]
 fn mandelbrot() {
-    let bytecode_object = ByteCodeObject::from_file("../../src/mandelbrot.b");
+    let bytecode_object = ByteCodeObject::from_file("./src/mandelbrot.b");
     let mut interpreter = ByteCodeInterpreter::new(bytecode_object);
     interpreter.execute_program();
     let correct_output = r#"AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
