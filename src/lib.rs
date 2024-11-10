@@ -31,12 +31,12 @@ impl ByteCodeInterpreter {
                     self.tape[self.tape_pointer] =
                         self.tape[self.tape_pointer].wrapping_add(*operand);
                 }
-                Instruction::Pointer(operand) => {
-                    self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
-                }
                 Instruction::OffsetAdd((offset, val)) => {
                     self.tape[self.tape_pointer.wrapping_add(*offset)] =
                         self.tape[self.tape_pointer.wrapping_add(*offset)].wrapping_add(*val);
+                }
+                Instruction::Pointer(operand) => {
+                    self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
                 Instruction::Loop(instructions2) => {
                     if self.tape[self.tape_pointer] != 0 {
@@ -72,7 +72,7 @@ impl ByteCodeObject {
         let program = read_program(fname);
         ByteCodeObject::new(&program)
     }
-    pub fn new(program2: &[char]) -> ByteCodeObject {
+    pub fn unoptimized_new(program2: &[char]) -> ByteCodeObject {
         let program = cleanup(program2);
         let mut instructions: Vec<Instruction> = Vec::new();
         let matches = get_matches(&program);
@@ -86,7 +86,7 @@ impl ByteCodeObject {
                 '[' => {
                     let matching: usize = *matches.get(&i).expect("not in dictionary");
                     let subprogram = &program[i + 1..matching];
-                    let obj = ByteCodeObject::new(subprogram);
+                    let obj = ByteCodeObject::unoptimized_new(subprogram);
                     i = matching;
                     Instruction::loop_instruction(obj)
                 }
@@ -96,7 +96,10 @@ impl ByteCodeObject {
             instructions.push(instruction);
             i += 1;
         }
-        let mut tmp = ByteCodeObject { instructions };
+        ByteCodeObject { instructions }
+    }
+    pub fn new(program2: &[char]) -> ByteCodeObject {
+        let mut tmp = ByteCodeObject::unoptimized_new(program2);
         tmp.optimize();
         tmp
     }
@@ -214,11 +217,68 @@ impl ByteCodeObject {
         }
         self.instructions = instructions;
     }
+    fn eliminate_dead_pointer_instructions(&mut self) {
+        let mut instructions: Vec<Instruction> = Vec::new();
+        let mut i = 0;
+        while i < self.instructions.len() {
+            let mut instruction = self.instructions[i].clone();
+            if let Instruction::Loop(ref mut instructions2) = instruction {
+                instructions2.eliminate_dead_pointer_instructions();
+                instructions.push(instruction);
+                i += 1;
+                continue;
+            }
+            if let Instruction::Pointer(offset) = instruction {
+                if offset != 0 {
+                    instructions.push(instruction);
+                    i += 1;
+                    continue;
+                } else {
+                    i += 1;
+                }
+            } else {
+                instructions.push(instruction);
+                i += 1;
+                continue;
+            }
+        }
+        self.instructions = instructions;
+    }
+
+    fn eliminate_dead_memory_instructions(&mut self) {
+        let mut instructions: Vec<Instruction> = Vec::new();
+        let mut i = 0;
+        while i < self.instructions.len() {
+            if let Instruction::Loop(ref mut instructions2) = self.instructions[i] {
+                instructions2.eliminate_dead_memory_instructions();
+                instructions.push(self.instructions[i].clone());
+                i += 1;
+                continue;
+            }
+            if let Instruction::Memory(val) = self.instructions[i] {
+                if val != 0 {
+                    instructions.push(self.instructions[i].clone());
+                    i += 1;
+                    continue;
+                } else {
+                    i += 1;
+                }
+            } else {
+                instructions.push(self.instructions[i].clone());
+                i += 1;
+                continue;
+            }
+        }
+        self.instructions = instructions;
+    }
+
     fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
         self.add_clear_cell_instructions();
         self.add_add_offset_instructions();
+        self.eliminate_dead_memory_instructions();
+        self.eliminate_dead_pointer_instructions();
     }
 }
 #[derive(Clone, Debug)]
