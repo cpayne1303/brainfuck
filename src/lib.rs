@@ -170,7 +170,6 @@ instructions2.add_clear_cell_instructions();
 	    self.instructions = instructions;
     }
     fn add_add_offset_instructions(&mut self) {
-	    if self.instructions.len()>0 {
 	    let mut instructions:Vec<Instruction> = Vec::new();
 	    let mut i=0;
 	    let mut current_instruction = self.instructions[i].clone();
@@ -194,7 +193,7 @@ instructions2.add_clear_cell_instructions();
 		    if let Instruction::Pointer(offset) = current_instruction {
 			    if let Instruction::Memory(val) = self.instructions[i+1] {
 				    current_instruction = Instruction::OffsetAdd((offset, val));
-				let mut next_instruction = Instruction::Pointer(offset);
+				let next_instruction = Instruction::Pointer(offset);
 				    instructions.push(current_instruction);
 				    current_instruction = next_instruction;
 				    i+=1;
@@ -212,7 +211,6 @@ current_instruction = self.instructions[i+1].clone();
 }
 }
 self.instructions=instructions;
-}
 }
     fn optimize(&mut self) {
         self.group_add_instructions();
