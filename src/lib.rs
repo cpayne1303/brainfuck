@@ -25,6 +25,7 @@ impl ByteCodeInterpreter {
     fn execute_program_helper(&mut self, instructions: &ByteCodeObject) {
         let mut symbol_num = 0;
         while symbol_num < instructions.instructions.len() {
+            // println!("{:?}", &instructions.instructions[symbol_num]);
             match &instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
                     self.tape[self.tape_pointer] =
@@ -188,11 +189,16 @@ impl ByteCodeObject {
                 instructions.push(current_instruction);
                 break;
             }
-            if let Instruction::Pointer(offset) = current_instruction {
+            if let Instruction::Pointer(ref mut offset) = current_instruction {
+                if let Instruction::Pointer(offset2) = self.instructions[i + 1] {
+                    *offset = offset.wrapping_add(offset2);
+                    i += 1;
+                    continue;
+                }
                 if let Instruction::Memory(val) = self.instructions[i + 1] {
-                    current_instruction = Instruction::OffsetAdd((offset, val));
-                    let next_instruction = Instruction::Pointer(offset);
-                    instructions.push(current_instruction);
+                    let current_instruction2 = Instruction::OffsetAdd((*offset, val));
+                    let next_instruction = Instruction::Pointer(*offset);
+                    instructions.push(current_instruction2);
                     current_instruction = next_instruction;
                     i += 1;
                 } else {
