@@ -33,18 +33,19 @@ impl ByteCodeInterpreter {
                 Instruction::Pointer(operand) => {
                     self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
-		Instruction::OffsetAdd((offset, val)) => {
-			self.tape[self.tape_pointer.wrapping_add(*offset)]=self.tape[self.tape_pointer.wrapping_add(*offset)].wrapping_add(*val);
-		}
+                Instruction::OffsetAdd((offset, val)) => {
+                    self.tape[self.tape_pointer.wrapping_add(*offset)] =
+                        self.tape[self.tape_pointer.wrapping_add(*offset)].wrapping_add(*val);
+                }
                 Instruction::Loop(instructions2) => {
                     if self.tape[self.tape_pointer] != 0 {
                         self.execute_program_helper(instructions2);
                         continue;
                     }
                 }
-		Instruction::ClearCell => {
-			self.tape[self.tape_pointer]=0;
-		}
+                Instruction::ClearCell => {
+                    self.tape[self.tape_pointer] = 0;
+                }
                 Instruction::Input => {
                     let mut buffer = [0u8; 1];
                     let _ = std::io::stdin().read_exact(&mut buffer);
@@ -145,87 +146,82 @@ impl ByteCodeObject {
         self.instructions = instructions;
     }
     fn add_clear_cell_instructions(&mut self) {
-	    let mut instructions: Vec<Instruction> = Vec::new();
-	    let mut i=0;
-	    while i<self.instructions.len() {
-		    let mut instruction = self.instructions[i].clone();
-		    if let Instruction::Loop(ref mut instructions2) = instruction {
-			    if instructions2.instructions.len() == 1 {
-				    if let Instruction::Memory(val) = instructions2.instructions[0] {
-					    if val == 255 {
-						    instruction = Instruction::ClearCell;
-					    }
-				    }
-			    else {
-instructions2.add_clear_cell_instructions();
-			    }
-			    }
-			    else {
-instructions2.add_clear_cell_instructions();
-			    }
-		    }
-		    instructions.push(instruction);
-		    i+=1;
-	    }
-	    self.instructions = instructions;
+        let mut instructions: Vec<Instruction> = Vec::new();
+        let mut i = 0;
+        while i < self.instructions.len() {
+            let mut instruction = self.instructions[i].clone();
+            if let Instruction::Loop(ref mut instructions2) = instruction {
+                if instructions2.instructions.len() == 1 {
+                    if let Instruction::Memory(val) = instructions2.instructions[0] {
+                        if val == 255 {
+                            instruction = Instruction::ClearCell;
+                        }
+                    } else {
+                        instructions2.add_clear_cell_instructions();
+                    }
+                } else {
+                    instructions2.add_clear_cell_instructions();
+                }
+            }
+            instructions.push(instruction);
+            i += 1;
+        }
+        self.instructions = instructions;
     }
     fn add_add_offset_instructions(&mut self) {
-	    let mut instructions:Vec<Instruction> = Vec::new();
-	    let mut i=0;
-	    let mut current_instruction = self.instructions[i].clone();
-	    while i<self.instructions.len() {
-		    if let Instruction::Loop(ref mut instructions2) = current_instruction {
-			    instructions2.add_add_offset_instructions();
-			    instructions.push(current_instruction);
-			    if i+1<self.instructions.len() {
-			    current_instruction = self.instructions[i+1].clone();
-			    }
-			    else {
-				    break;
-			    }
-			    i+=1;
-			    continue;
-		    }
-		    if i+1==self.instructions.len() {
-			    instructions.push(current_instruction);
-			    break;
-		    }
-		    if let Instruction::Pointer(offset) = current_instruction {
-			    if let Instruction::Memory(val) = self.instructions[i+1] {
-				    current_instruction = Instruction::OffsetAdd((offset, val));
-				let next_instruction = Instruction::Pointer(offset);
-				    instructions.push(current_instruction);
-				    current_instruction = next_instruction;
-				    i+=1;
-			    }
-			    else {
-				    instructions.push(current_instruction);
-				    current_instruction = self.instructions[i+1].clone();
-				    i+=1;
-			    }
-		    }
-else {
-	instructions.push(current_instruction);
-current_instruction = self.instructions[i+1].clone();
-	i+=1;
-}
-}
-self.instructions=instructions;
-}
+        let mut instructions: Vec<Instruction> = Vec::new();
+        let mut i = 0;
+        let mut current_instruction = self.instructions[i].clone();
+        while i < self.instructions.len() {
+            if let Instruction::Loop(ref mut instructions2) = current_instruction {
+                instructions2.add_add_offset_instructions();
+                instructions.push(current_instruction);
+                if i + 1 < self.instructions.len() {
+                    current_instruction = self.instructions[i + 1].clone();
+                } else {
+                    break;
+                }
+                i += 1;
+                continue;
+            }
+            if i + 1 == self.instructions.len() {
+                instructions.push(current_instruction);
+                break;
+            }
+            if let Instruction::Pointer(offset) = current_instruction {
+                if let Instruction::Memory(val) = self.instructions[i + 1] {
+                    current_instruction = Instruction::OffsetAdd((offset, val));
+                    let next_instruction = Instruction::Pointer(offset);
+                    instructions.push(current_instruction);
+                    current_instruction = next_instruction;
+                    i += 1;
+                } else {
+                    instructions.push(current_instruction);
+                    current_instruction = self.instructions[i + 1].clone();
+                    i += 1;
+                }
+            } else {
+                instructions.push(current_instruction);
+                current_instruction = self.instructions[i + 1].clone();
+                i += 1;
+            }
+        }
+        self.instructions = instructions;
+    }
     fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
-	    self.add_clear_cell_instructions();
-	    self.add_add_offset_instructions();
+        self.add_clear_cell_instructions();
+        self.add_add_offset_instructions();
     }
 }
 #[derive(Clone, Debug)]
 enum Instruction {
     Memory(u8),
     Pointer(usize),
-	OffsetAdd((usize, u8)),
+    OffsetAdd((usize, u8)),
     Loop(ByteCodeObject),
-	ClearCell,
+    ClearCell,
     Input,
     Output,
 }
@@ -273,10 +269,10 @@ pub fn read_program(filename: &str) -> Vec<char> {
 }
 #[test]
 fn mandelbrot() {
-	let bytecode_object = ByteCodeObject::from_file("../../src/mandelbrot.b");
-	let mut interpreter = ByteCodeInterpreter::new(bytecode_object);
-	interpreter.execute_program();
-	let correct_output = r#"AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+    let bytecode_object = ByteCodeObject::from_file("../../src/mandelbrot.b");
+    let mut interpreter = ByteCodeInterpreter::new(bytecode_object);
+    interpreter.execute_program();
+    let correct_output = r#"AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
 AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
 AAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEFFGHIMTKLZOGFEEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBB
@@ -325,5 +321,5 @@ AAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEFFGHI
 AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
 AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
 "#;
-assert_eq!(correct_output, interpreter.output_log);
+    assert_eq!(correct_output, interpreter.output_log);
 }
