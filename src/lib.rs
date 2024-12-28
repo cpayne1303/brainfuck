@@ -20,6 +20,7 @@ impl ByteCodeInterpreter {
     pub fn execute_program(&mut self, instructions: &ByteCodeObject) {
         let mut symbol_num = 0;
         while symbol_num < instructions.instructions.len() {
+		// println!("{:?}", &instructions.instructions[symbol_num]);
             match &instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
                     self.tape[self.tape_pointer] =
@@ -32,6 +33,12 @@ impl ByteCodeInterpreter {
                 Instruction::Pointer(operand) => {
                     self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
+		Instruction::Spread(memory_value, values) => {
+			self.tape[self.tape_pointer]=self.tape[self.tape_pointer].wrapping_add(*memory_value);
+			for (offset, val) in values.iter() {
+				self.tape[self.tape_pointer.wrapping_add(*offset)] = self.tape[self.tape_pointer.wrapping_add(*offset)].wrapping_add(*val);
+			}
+		}
                 Instruction::Loop(instructions2) => {
                     if self.tape[self.tape_pointer] != 0 {
                         self.execute_program(instructions2);
@@ -142,6 +149,99 @@ impl ByteCodeObject {
             i += 1;
         }
         self.instructions = instructions;
+    }
+    fn add_spread_instructions(&mut self) {
+let mut instructions = Vec::new();
+	    let mut i=0;
+	    while i<self.instructions.len() {
+		    let mut instruction = self.instructions[i].clone();
+		    match instruction {
+			    Instruction::Loop(ref mut instructions2) => {
+				    instructions2.add_spread_instructions();
+				    instructions.push(instruction);
+i+=1;
+				    continue;
+			    }
+			    Instruction::ClearCell => {
+				    instructions.push(instruction);
+				    i+=1;
+				    continue;
+			    }
+			    Instruction::Pointer(_) => {
+				    instructions.push(instruction);
+				    i+=1;
+				    continue;
+			    }
+			    Instruction::Input => {
+				    instructions.push(instruction);
+				    i+=1;
+				    continue;
+			    }
+			    Instruction::Output => {
+				    instructions.push(instruction);
+				    i+=1;
+				    continue;
+			    }
+			    _ => {
+let mut keepgoing = true;
+				    let mut num_memory_instructions = 0;
+				    if let Instruction::Memory(_) = instruction {
+					    num_memory_instructions+=1;
+				    }
+				    let mut j = i;
+				    while keepgoing && j+1<self.instructions.len() {
+					    let next_instruction = self.instructions[j+1].clone();
+					    match next_instruction {
+						    Instruction::Memory(_) => {
+							    num_memory_instructions += 1;
+							    if num_memory_instructions>1 {
+							    keepgoing=false;
+						    }
+					    }
+					    Instruction::OffsetAdd(_) => {
+						    keepgoing=true;
+					    }
+					    _ => {
+						    keepgoing=false;
+					    }
+				    }
+				    if keepgoing {
+					    j+=1;
+				    }
+			    }
+			    if i==j {
+				    instructions.push(instruction);
+				    i+=1;
+				    continue;
+			    }
+			    else {
+				    let mut memory_value = 0;
+				    let mut k=i;
+				    while k<=j {
+					    let instruction3 = self.instructions[k].clone();
+					    if let Instruction::Memory(val) = instruction3 {
+						    memory_value = val;
+						    break;
+					    }
+					    k+=1;
+				    }
+				    k=i;
+				    let mut values: Vec<(usize, u8)> = Vec::new();
+				    while k<=j {
+					    let instruction4 = self.instructions[k].clone();
+					    if let Instruction::OffsetAdd((offset2, val2)) = instruction4 {
+						    values.push((offset2, val2));
+					    }
+					    k+=1;
+				    }
+				    instructions.push(Instruction::Spread(memory_value, values));
+				    i=j+1;
+				    continue;
+			    }
+		    }
+	    }
+    }
+	    self.instructions = instructions;
     }
     fn add_clear_cell_instructions(&mut self) {
         let mut instructions: Vec<Instruction> = Vec::new();
@@ -314,6 +414,7 @@ impl ByteCodeObject {
         self.eliminate_dead_memory_instructions();
         self.eliminate_dead_pointer_instructions();
         self.eliminate_dead_offset_add_instructions();
+	    self.add_spread_instructions();
     }
 }
 #[derive(Clone, Debug)]
@@ -321,6 +422,7 @@ enum Instruction {
     Memory(u8),
     Pointer(usize),
     OffsetAdd((usize, u8)),
+	Spread(u8, Vec<(usize, u8)>),
     Loop(ByteCodeObject),
     ClearCell,
     Input,
