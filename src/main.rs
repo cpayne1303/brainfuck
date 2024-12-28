@@ -11,8 +11,8 @@ struct Cli {
     brainfuck_code: Option<String>,
     #[arg(short, long = "time")]
     time: bool,
-	#[arg(short, long = "no-optimize")]
-disable_optimizations: bool,
+    #[arg(short, long = "no-optimize")]
+    disable_optimizations: bool,
 }
 fn main() {
     let cli = Cli::parse();
@@ -26,7 +26,7 @@ fn main() {
         return;
     };
     if !cli.disable_optimizations {
-	    bytecode_object.optimize();
+        bytecode_object.optimize();
     }
     let mut bytecode_interpreter = ByteCodeInterpreter::new();
     if cli.time {

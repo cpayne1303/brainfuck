@@ -20,7 +20,6 @@ impl ByteCodeInterpreter {
     pub fn execute_program(&mut self, instructions: &ByteCodeObject) {
         let mut symbol_num = 0;
         while symbol_num < instructions.instructions.len() {
-            // println!("{:?}", &instructions.instructions[symbol_num]);
             match &instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
                     self.tape[self.tape_pointer] =
@@ -266,7 +265,48 @@ impl ByteCodeObject {
         }
         self.instructions = instructions;
     }
-
+    fn eliminate_dead_offset_add_instructions(&mut self) {
+        let mut i = 0;
+        let mut instructions = Vec::new();
+        while i < self.instructions.len() {
+            let mut instruction = self.instructions[i].clone();
+            match instruction {
+                Instruction::Loop(ref mut instructions2) => {
+                    instructions2.eliminate_dead_offset_add_instructions();
+                    instructions.push(instruction);
+                    i += 1;
+                    continue;
+                }
+                Instruction::OffsetAdd((offset, val)) => {
+                    if offset == 0 && val == 0 {
+                        i += 1;
+                        continue;
+                    }
+                    if val == 0 {
+                        instructions.push(Instruction::Pointer(offset));
+                        i += 1;
+                        continue;
+                    }
+                    if offset == 0 {
+                        instructions.push(Instruction::Memory(val));
+                        i += 1;
+                        continue;
+                    } else {
+                        instructions.push(instruction);
+                        i += 1;
+                        continue;
+                    }
+                }
+                _ => {
+                    instructions.push(instruction);
+                    i += 1;
+                    continue;
+                }
+            }
+            i += 1;
+        }
+        self.instructions = instructions;
+    }
     pub fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
@@ -274,6 +314,7 @@ impl ByteCodeObject {
         self.add_add_offset_instructions();
         self.eliminate_dead_memory_instructions();
         self.eliminate_dead_pointer_instructions();
+        self.eliminate_dead_offset_add_instructions();
     }
 }
 #[derive(Clone, Debug)]
