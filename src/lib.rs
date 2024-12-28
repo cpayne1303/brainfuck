@@ -3,26 +3,21 @@ use std::fs;
 use std::io::Read;
 #[derive(Clone, Debug)]
 pub struct ByteCodeInterpreter {
-    instructions: ByteCodeObject,
     tape: Vec<u8>,
     tape_pointer: usize,
     output_log: String,
 }
 
 impl ByteCodeInterpreter {
-    pub fn new(instructions: ByteCodeObject) -> ByteCodeInterpreter {
+    pub fn new() -> ByteCodeInterpreter {
         let tape: Vec<u8> = vec![0; 30000];
         ByteCodeInterpreter {
-            instructions,
             tape,
             tape_pointer: 0,
             output_log: String::new(),
         }
     }
-    pub fn execute_program(&mut self) {
-        self.execute_program_helper(&self.instructions.clone());
-    }
-    fn execute_program_helper(&mut self, instructions: &ByteCodeObject) {
+    pub fn execute_program(&mut self, instructions: &ByteCodeObject) {
         let mut symbol_num = 0;
         while symbol_num < instructions.instructions.len() {
             // println!("{:?}", &instructions.instructions[symbol_num]);
@@ -40,7 +35,7 @@ impl ByteCodeInterpreter {
                 }
                 Instruction::Loop(instructions2) => {
                     if self.tape[self.tape_pointer] != 0 {
-                        self.execute_program_helper(instructions2);
+                        self.execute_program(instructions2);
                         continue;
                     }
                 }
@@ -70,7 +65,7 @@ pub struct ByteCodeObject {
 impl ByteCodeObject {
     pub fn from_file(fname: &str) -> ByteCodeObject {
         let program = read_program(fname);
-        ByteCodeObject::new(&program)
+        ByteCodeObject::unoptimized_new(&program)
     }
     pub fn unoptimized_new(program2: &[char]) -> ByteCodeObject {
         let program = cleanup(program2);
@@ -272,7 +267,7 @@ impl ByteCodeObject {
         self.instructions = instructions;
     }
 
-    fn optimize(&mut self) {
+    pub fn optimize(&mut self) {
         self.group_add_instructions();
         self.group_add_pointer_instructions();
         self.add_clear_cell_instructions();
