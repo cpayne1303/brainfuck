@@ -20,7 +20,7 @@ impl ByteCodeInterpreter {
     pub fn execute_program(&mut self, instructions: &ByteCodeObject) {
         let mut symbol_num = 0;
         while symbol_num < instructions.instructions.len() {
-		println!("{:?}", &instructions.instructions[symbol_num]);
+		// println!("{:?}", &instructions.instructions[symbol_num]);
             match &instructions.instructions[symbol_num] {
                 Instruction::Memory(operand) => {
                     self.tape[self.tape_pointer] =
@@ -30,6 +30,11 @@ impl ByteCodeInterpreter {
                     self.tape[self.tape_pointer.wrapping_add(*offset)] =
                         self.tape[self.tape_pointer.wrapping_add(*offset)].wrapping_add(*val);
                 }
+                Instruction::PointerScan(operand) => {
+			while self.tape[self.tape_pointer]>0 {
+                    self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
+                }
+	}
                 Instruction::Pointer(operand) => {
                     self.tape_pointer = self.tape_pointer.wrapping_add(*operand);
                 }
@@ -158,6 +163,41 @@ impl ByteCodeObject {
         }
         self.instructions = instructions;
     }
+        fn add_scan_pointer_instructions(&mut self) {
+	    let mut i=0;
+	    let mut instructions = Vec::new();
+	    while i<self.instructions.len() {
+		    let mut instruction = self.instructions[i].clone();
+		    match instruction {
+			    Instruction::Loop(ref mut instructions2) => {
+				    if instructions2.instructions.len()==1 {
+					    if let Instruction::Pointer(val) = &instructions2.instructions[0] {
+							    instructions.push(Instruction::PointerScan(*val));
+							    i+=1;
+							    continue;
+						    }
+						    else {
+							    instructions.push(instruction);
+							    i+=1;
+							    continue;
+						    }
+					    }
+						    else {
+							    instructions2.add_scan_pointer_instructions();
+							    instructions.push(instruction);
+							    i+=1;
+							    continue;
+						    }
+					    }
+				    _ => {
+					    instructions.push(instruction);
+					    i+=1;
+					    continue;
+				    }
+			    }
+		    }
+		    self.instructions = instructions;
+	    }
     fn add_spread_current_instructions(&mut self) {
 	    let mut i=0;
 	    let mut instructions = Vec::new();
@@ -465,12 +505,14 @@ let mut keepgoing = true;
         self.eliminate_dead_offset_add_instructions();
 	    self.add_spread_instructions();
 	    self.add_spread_current_instructions();
+	    self.add_scan_pointer_instructions();
     }
 }
 #[derive(Clone, Debug)]
 enum Instruction {
     Memory(u8),
     Pointer(usize),
+	PointerScan(usize),
     OffsetAdd((usize, u8)),
 	Spread(u8, Vec<(usize, u8)>),
 	SpreadCurrent(Vec<(usize, u8)>),
