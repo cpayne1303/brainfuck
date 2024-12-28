@@ -303,7 +303,6 @@ impl ByteCodeObject {
                     continue;
                 }
             }
-            i += 1;
         }
         self.instructions = instructions;
     }
